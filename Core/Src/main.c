@@ -23,7 +23,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "stdio.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -54,7 +54,7 @@ osThreadId_t myTask02Handle;
 const osThreadAttr_t myTask02_attributes = {
   .name = "myTask02",
   .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityHigh,
+  .priority = (osPriority_t) osPriorityNormal,
 };
 /* USER CODE BEGIN PV */
 
@@ -236,7 +236,7 @@ void StartDefaultTask(void *argument)
   /* Infinite loop */
   while(1)
   {
-	  printf("task1: ");
+	  printf("Task1 is running  \r\n");
 	  HAL_GPIO_TogglePin(gled_GPIO_Port, gled_Pin);
 	  HAL_Delay(1000);
   }
@@ -255,7 +255,8 @@ void StartTask02(void *argument)
   /* USER CODE BEGIN StartTask02 */
   /* Infinite loop */
   while(1)
-  {   printf("Task2  \n");
+  {
+	  printf("Task2 is running  \r\n");
 	  HAL_GPIO_TogglePin(rled_GPIO_Port, rled_Pin);
 	  vTaskDelay(100);
   }

@@ -4,7 +4,7 @@ syscalls.c:72:5:_getpid	4	static
 syscalls.c:77:5:_kill	16	static
 syscalls.c:83:6:_exit	16	static
 syscalls.c:89:27:_read	32	static
-syscalls.c:101:27:_write	32	static
+syscalls.c:101:6:_write	32	static
 syscalls.c:113:5:_close	16	static
 syscalls.c:119:5:_fstat	16	static
 syscalls.c:125:5:_isatty	16	static
