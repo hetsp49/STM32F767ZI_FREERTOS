@@ -67,10 +67,11 @@ void StartDefaultTask(void *argument);
 void StartTask02(void *argument);
 
 /* USER CODE BEGIN PFP */
-//struct Person {
-//    char name[50];
-//    int age;
-//};
+ static struct Person {
+    char name[50];
+    int age;
+};
+struct Person person1 ={"het",30};
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -85,6 +86,7 @@ void StartTask02(void *argument);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
+
 //	struct Person person1;
 //	strcpy(person1.name, "het");
 //	person1.age = 30;
@@ -133,7 +135,7 @@ int main(void)
 
   /* Create the thread(s) */
   /* creation of defaultTask */
-  defaultTaskHandle = osThreadNew(StartDefaultTask, /*(void *)&person1*/NULL, &defaultTask_attributes);
+  defaultTaskHandle = osThreadNew(StartDefaultTask, (void *)&person1, &defaultTask_attributes);
 
   /* creation of myTask02 */
   myTask02Handle = osThreadNew(StartTask02, NULL, &myTask02_attributes);
@@ -244,12 +246,12 @@ void StartDefaultTask(void *pvParameters)
 	  printf("Task1 is running  \r\n");
 	  HAL_GPIO_TogglePin(gled_GPIO_Port, gled_Pin);
 	  HAL_Delay(1000);
-//	  // Cast the parameter to the structure type
-//	     struct Person *person = (struct Person *)pvParameters;
-//
-//	     // Access the members of the structure
-//	     printf("Name: %s\n", person->name);
-//	     printf("Age: %d\n", person->age);
+	  // Cast the parameter to the structure type
+	     struct Person *person = (struct Person *)pvParameters;
+
+	     // Access the members of the structure
+	     printf("Name: %s\n", person->name);
+	     printf("Age: %d\n", person->age);
   }
   /* USER CODE END 5 */
 }
