@@ -23,7 +23,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "stdio.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -47,14 +47,14 @@ osThreadId_t defaultTaskHandle;
 const osThreadAttr_t defaultTask_attributes = {
   .name = "defaultTask",
   .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
+  .priority = (osPriority_t) osPriorityHigh,
 };
 /* Definitions for myTask02 */
 osThreadId_t myTask02Handle;
 const osThreadAttr_t myTask02_attributes = {
   .name = "myTask02",
   .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityHigh,
+  .priority = (osPriority_t) osPriorityNormal,
 };
 /* USER CODE BEGIN PV */
 
@@ -67,7 +67,11 @@ void StartDefaultTask(void *argument);
 void StartTask02(void *argument);
 
 /* USER CODE BEGIN PFP */
-
+ static struct Person {
+    char name[50];
+    int age;
+};
+struct Person person1 ={"het",30};
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -83,6 +87,9 @@ int main(void)
 {
   /* USER CODE BEGIN 1 */
 
+//	struct Person person1;
+//	strcpy(person1.name, "het");
+//	person1.age = 30;
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -128,7 +135,7 @@ int main(void)
 
   /* Create the thread(s) */
   /* creation of defaultTask */
-  defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
+  defaultTaskHandle = osThreadNew(StartDefaultTask, (void *)&person1, &defaultTask_attributes);
 
   /* creation of myTask02 */
   myTask02Handle = osThreadNew(StartTask02, NULL, &myTask02_attributes);
@@ -230,14 +237,21 @@ static void MX_GPIO_Init(void)
   * @retval None
   */
 /* USER CODE END Header_StartDefaultTask */
-void StartDefaultTask(void *argument)
+void StartDefaultTask(void *pvParameters)
 {
   /* USER CODE BEGIN 5 */
   /* Infinite loop */
   while(1)
   {
+	  printf("Task1 is running  \r\n");
 	  HAL_GPIO_TogglePin(gled_GPIO_Port, gled_Pin);
 	  HAL_Delay(1000);
+	  // Cast the parameter to the structure type
+	     struct Person *person = (struct Person *)pvParameters;
+
+	     // Access the members of the structure
+	     printf("Name: %s\n", person->name);
+	     printf("Age: %d\n", person->age);
   }
   /* USER CODE END 5 */
 }
@@ -255,8 +269,10 @@ void StartTask02(void *argument)
   /* Infinite loop */
   while(1)
   {
+	  printf("Task2 is running  \r\n");
 	  HAL_GPIO_TogglePin(rled_GPIO_Port, rled_Pin);
-	  vTaskDelay(100);
+	 vTaskDelay(100);
+	  //HAL_Delay(1000);
   }
   /* USER CODE END StartTask02 */
 }
