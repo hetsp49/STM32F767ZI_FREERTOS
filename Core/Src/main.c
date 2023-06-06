@@ -21,7 +21,7 @@
 #include "main.h"
 #include "cmsis_os.h"
 #include "queue.h"
-#include "stdio.h"
+#include <stdio.h>
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
@@ -55,7 +55,14 @@ osThreadId_t myTask02Handle;
 const osThreadAttr_t myTask02_attributes = {
   .name = "myTask02",
   .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
+  .priority = (osPriority_t) osPriorityLow,
+};
+/* Definitions for myTask03 */
+osThreadId_t myTask03Handle;
+const osThreadAttr_t myTask03_attributes = {
+  .name = "myTask03",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityLow,
 };
 /* USER CODE BEGIN PV */
 
@@ -66,9 +73,12 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 void StartDefaultTask(void *argument);
 void StartTask02(void *argument);
+void StartTask03(void *argument);
 
 /* USER CODE BEGIN PFP */
+
 QueueHandle_t xQueue;
+//int data = 0;
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -83,7 +93,7 @@ QueueHandle_t xQueue;
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-	 xQueue = xQueueCreate(5,sizeof(int32_t));
+	 xQueue = xQueueCreate(5,sizeof(int));
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -128,13 +138,16 @@ int main(void)
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
+  if(xQueue != NULL){
   /* creation of defaultTask */
-  if (xQueue != NULL){
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
   /* creation of myTask02 */
   myTask02Handle = osThreadNew(StartTask02, NULL, &myTask02_attributes);
-  }
+
+  /* creation of myTask03 */
+  myTask03Handle = osThreadNew(StartTask03, NULL, &myTask03_attributes);
+
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
@@ -145,7 +158,7 @@ int main(void)
 
   /* Start scheduler */
   osKernelStart();
-
+  }
   /* We should never get here as control is now taken by the scheduler */
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
@@ -235,17 +248,27 @@ static void MX_GPIO_Init(void)
 void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN 5 */
-	int data = 0;
+
   /* Infinite loop */
-  while(1)
-  {
-	  xQueueSend(xQueue, &data, 0);
-	  printf("Sender Task: Sent data %d\r\n", data);
-	  data++;
-	  HAL_GPIO_TogglePin(gled_GPIO_Port, gled_Pin);
-	  HAL_Delay(1000);
-	  vTaskDelay(pdMS_TO_TICKS(1000));
-  }
+//  while(1)
+//  {
+//	  xQueueSend(xQueue, &data, 0);
+//	  printf("Sender Task: Sent data %d\r\n", data);
+//	  data++;
+//	  HAL_GPIO_TogglePin(gled_GPIO_Port, gled_Pin);
+//	  HAL_Delay(1000);
+//	  vTaskDelay(pdMS_TO_TICKS(1000));
+//  }
+
+	// RECEIVER TASK :
+    int receivedData;
+
+    while (1) {
+        // Receive data from the queue
+        if (xQueueReceive(xQueue, &receivedData, portMAX_DELAY) == pdTRUE) {
+            printf("Receiver Task: Received data %d \r\n", receivedData);
+        }
+    }
   /* USER CODE END 5 */
 }
 
@@ -259,19 +282,69 @@ void StartDefaultTask(void *argument)
 void StartTask02(void *argument)
 {
   /* USER CODE BEGIN StartTask02 */
-	int receivedData;
+	//int receivedData;
   /* Infinite loop */
-  while(1)
-  {
-	  if (xQueueReceive(xQueue, &receivedData, portMAX_DELAY) == pdTRUE)
-	  {
-	              printf("Receiver Task: Received data %d\n", receivedData);
-	  }
-//	  HAL_GPIO_TogglePin(rled_GPIO_Port, rled_Pin);
-//	  //vTaskDelay(100);
-//	  HAL_Delay(100);
-  }
+//  while(1)
+//  {
+//	  if (xQueueReceive(xQueue, &data, portMAX_DELAY) == pdTRUE)
+//	  {
+//	              printf("Receiver Task: Received data %d\n", data);
+//	  }
+////	  HAL_GPIO_TogglePin(rled_GPIO_Port, rled_Pin);
+////	  //vTaskDelay(100);
+////	  HAL_Delay(100);
+//  }
+
+	// SENDER TASK :
+	 int data = 1;
+
+	    while (1) {
+	        // Send data to the queue
+	    	if(xQueueSend(xQueue, &data, 0) == pdTRUE )
+	    	{
+	        printf("Sender Task 1: Sent data %d \r\n", data);
+
+	        // Increment the data value
+	        data++;
+	    	}
+	        // Delay before sending the next data
+	        vTaskDelay(1000);
+	    }
+
   /* USER CODE END StartTask02 */
+}
+
+/* USER CODE BEGIN Header_StartTask03 */
+/**
+* @brief Function implementing the myTask03 thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartTask03 */
+void StartTask03(void *argument)
+{
+
+  /* USER CODE BEGIN StartTask03
+   Infinite loop
+  for(;;)
+  {
+    osDelay(1);
+  }
+   USER CODE END StartTask03 */
+	// SENDER TASK :
+	int data = 100;
+
+	    while (1) {
+	        // Send data to the queue
+	        if(xQueueSend(xQueue, &data, 0)==pdTRUE){
+	        printf("Sender Task 2: Sent data %d \r\n", data);
+
+	        // Increment the data value
+	        data += 10;
+	        }
+	        // Delay before sending the next data
+	        vTaskDelay(1000);
+	    }
 }
 
 /**
