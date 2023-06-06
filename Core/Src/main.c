@@ -20,7 +20,8 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "cmsis_os.h"
-
+#include "queue.h"
+#include "stdio.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
@@ -47,7 +48,7 @@ osThreadId_t defaultTaskHandle;
 const osThreadAttr_t defaultTask_attributes = {
   .name = "defaultTask",
   .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
+  .priority = (osPriority_t) osPriorityHigh,
 };
 /* Definitions for myTask02 */
 osThreadId_t myTask02Handle;
@@ -67,7 +68,7 @@ void StartDefaultTask(void *argument);
 void StartTask02(void *argument);
 
 /* USER CODE BEGIN PFP */
-
+QueueHandle_t xQueue;
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -82,7 +83,7 @@ void StartTask02(void *argument);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-
+	 xQueue = xQueueCreate(5,sizeof(int32_t));
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -128,11 +129,12 @@ int main(void)
 
   /* Create the thread(s) */
   /* creation of defaultTask */
+  if (xQueue != NULL){
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
   /* creation of myTask02 */
   myTask02Handle = osThreadNew(StartTask02, NULL, &myTask02_attributes);
-
+  }
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
@@ -233,11 +235,16 @@ static void MX_GPIO_Init(void)
 void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN 5 */
+	int data = 0;
   /* Infinite loop */
   while(1)
   {
+	  xQueueSend(xQueue, &data, 0);
+	  printf("Sender Task: Sent data %d\r\n", data);
+	  data++;
 	  HAL_GPIO_TogglePin(gled_GPIO_Port, gled_Pin);
 	  HAL_Delay(1000);
+	  vTaskDelay(pdMS_TO_TICKS(1000));
   }
   /* USER CODE END 5 */
 }
@@ -252,11 +259,17 @@ void StartDefaultTask(void *argument)
 void StartTask02(void *argument)
 {
   /* USER CODE BEGIN StartTask02 */
+	int receivedData;
   /* Infinite loop */
   while(1)
   {
-	  HAL_GPIO_TogglePin(rled_GPIO_Port, rled_Pin);
-	  vTaskDelay(100);
+	  if (xQueueReceive(xQueue, &receivedData, portMAX_DELAY) == pdTRUE)
+	  {
+	              printf("Receiver Task: Received data %d\n", receivedData);
+	  }
+//	  HAL_GPIO_TogglePin(rled_GPIO_Port, rled_Pin);
+//	  //vTaskDelay(100);
+//	  HAL_Delay(100);
   }
   /* USER CODE END StartTask02 */
 }
