@@ -20,10 +20,29 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "cmsis_os.h"
-
+#include "queue.h"
+#include <stdio.h>
+#include <string.h>
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+/* Define an enumerated type used to identify the source of the data. */
+//typedef enum
+//{
+//eSender1,
+//eSender2
+//} DataSource_t;
+///* Define the structure type that will be passed on the queue. */
+//typedef struct
+//{
+//uint8_t ucValue;
+//DataSource_t eDataSource;
+//} Data_t;
+///* Declare two variables of type Data_t that will be passed on the queue. */
+//static const Data_t xStructsToSend[ 2 ] =
+//{
+//{ 100, eSender1 }, /* Used by Sender1. */
+//{ 200, eSender2 } /* Used by Sender2. */
+//};
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -47,14 +66,21 @@ osThreadId_t defaultTaskHandle;
 const osThreadAttr_t defaultTask_attributes = {
   .name = "defaultTask",
   .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
+  .priority = (osPriority_t) osPriorityLow,
 };
 /* Definitions for myTask02 */
 osThreadId_t myTask02Handle;
 const osThreadAttr_t myTask02_attributes = {
   .name = "myTask02",
   .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityHigh,
+  .priority = (osPriority_t) osPriorityNormal,
+};
+/* Definitions for myTask03 */
+osThreadId_t myTask03Handle;
+const osThreadAttr_t myTask03_attributes = {
+  .name = "myTask03",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityNormal,
 };
 /* USER CODE BEGIN PV */
 
@@ -65,11 +91,14 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 void StartDefaultTask(void *argument);
 void StartTask02(void *argument);
+void StartTask03(void *argument);
 
 /* USER CODE BEGIN PFP */
-
+#define QUEUE_LENGTH 5
+QueueHandle_t xQueue;
+//int data = 0;
 /* USER CODE END PFP */
-
+#define BUFFER_SIZE 100
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
@@ -82,7 +111,7 @@ void StartTask02(void *argument);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-
+	 xQueue = xQueueCreate(QUEUE_LENGTH, sizeof(char *));
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -127,11 +156,15 @@ int main(void)
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
+  if(xQueue != NULL){
   /* creation of defaultTask */
-  defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
+  //defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
   /* creation of myTask02 */
-  myTask02Handle = osThreadNew(StartTask02, NULL, &myTask02_attributes);
+  myTask02Handle = osThreadNew(StartTask02,NULL, &myTask02_attributes);
+
+  /* creation of myTask03 */
+  myTask03Handle = osThreadNew(StartTask03,NULL, &myTask03_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -143,7 +176,7 @@ int main(void)
 
   /* Start scheduler */
   osKernelStart();
-
+  }
   /* We should never get here as control is now taken by the scheduler */
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
@@ -232,14 +265,9 @@ static void MX_GPIO_Init(void)
 /* USER CODE END Header_StartDefaultTask */
 void StartDefaultTask(void *argument)
 {
-  /* USER CODE BEGIN 5 */
-  /* Infinite loop */
-  while(1)
-  {
-	  HAL_GPIO_TogglePin(gled_GPIO_Port, gled_Pin);
-	  HAL_Delay(1000);
-  }
-  /* USER CODE END 5 */
+	for(;;){
+
+	}
 }
 
 /* USER CODE BEGIN Header_StartTask02 */
@@ -251,14 +279,47 @@ void StartDefaultTask(void *argument)
 /* USER CODE END Header_StartTask02 */
 void StartTask02(void *argument)
 {
-  /* USER CODE BEGIN StartTask02 */
-  /* Infinite loop */
-  while(1)
-  {
-	  HAL_GPIO_TogglePin(rled_GPIO_Port, rled_Pin);
-	  vTaskDelay(100);
-  }
-  /* USER CODE END StartTask02 */
+
+	//Sender Task
+	char *pcStringToSend;
+	    const size_t xMaxStringLength = 50;
+	    char buff[50];
+	/* Infinite loop */
+	while(1)
+	{
+	     pcStringToSend = ( char * ) buff;
+	     snprintf( pcStringToSend, xMaxStringLength, "hello from sender\r\n");
+	     xQueueSend( xQueue,&pcStringToSend,portMAX_DELAY );
+	     vTaskDelay(1000);
+	}
+	/* USER CODE END StartTask02 */
+}
+
+/* USER CODE BEGIN Header_StartTask03 */
+/**
+* @brief Function implementing the myTask03 thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartTask03 */
+void StartTask03(void *argument)
+{
+	// Receiver TAsk
+	//char *buffer1;
+	  char *pcReceivedString;
+	  /* Infinite loop */
+	  while(1)
+	  {
+	      xQueueReceive( xQueue,&pcReceivedString,portMAX_DELAY );
+	      /* The buffer holds a string, print it out. */
+	      printf("\r received the string: %s",pcReceivedString);
+	      /* The buffer is not required any more - release it so it can be freed, or re-used. */
+	     // prvReleaseBuffer( pcReceivedString );
+	  }
+  /* USER CODE BEGIN StartTask03
+
+   USER CODE END StartTask03 */
+
 }
 
 /**
