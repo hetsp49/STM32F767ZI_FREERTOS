@@ -22,26 +22,27 @@
 #include "cmsis_os.h"
 #include "queue.h"
 #include <stdio.h>
+#include <string.h>
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 /* Define an enumerated type used to identify the source of the data. */
-typedef enum
-{
-eSender1,
-eSender2
-} DataSource_t;
-/* Define the structure type that will be passed on the queue. */
-typedef struct
-{
-uint8_t ucValue;
-DataSource_t eDataSource;
-} Data_t;
-/* Declare two variables of type Data_t that will be passed on the queue. */
-static const Data_t xStructsToSend[ 2 ] =
-{
-{ 100, eSender1 }, /* Used by Sender1. */
-{ 200, eSender2 } /* Used by Sender2. */
-};
+//typedef enum
+//{
+//eSender1,
+//eSender2
+//} DataSource_t;
+///* Define the structure type that will be passed on the queue. */
+//typedef struct
+//{
+//uint8_t ucValue;
+//DataSource_t eDataSource;
+//} Data_t;
+///* Declare two variables of type Data_t that will be passed on the queue. */
+//static const Data_t xStructsToSend[ 2 ] =
+//{
+//{ 100, eSender1 }, /* Used by Sender1. */
+//{ 200, eSender2 } /* Used by Sender2. */
+//};
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -65,21 +66,21 @@ osThreadId_t defaultTaskHandle;
 const osThreadAttr_t defaultTask_attributes = {
   .name = "defaultTask",
   .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityHigh,
+  .priority = (osPriority_t) osPriorityLow,
 };
 /* Definitions for myTask02 */
 osThreadId_t myTask02Handle;
 const osThreadAttr_t myTask02_attributes = {
   .name = "myTask02",
   .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityLow,
+  .priority = (osPriority_t) osPriorityNormal,
 };
 /* Definitions for myTask03 */
 osThreadId_t myTask03Handle;
 const osThreadAttr_t myTask03_attributes = {
   .name = "myTask03",
   .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityLow,
+  .priority = (osPriority_t) osPriorityNormal,
 };
 /* USER CODE BEGIN PV */
 
@@ -93,11 +94,11 @@ void StartTask02(void *argument);
 void StartTask03(void *argument);
 
 /* USER CODE BEGIN PFP */
-
+#define QUEUE_LENGTH 5
 QueueHandle_t xQueue;
 //int data = 0;
 /* USER CODE END PFP */
-
+#define BUFFER_SIZE 100
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
@@ -110,7 +111,7 @@ QueueHandle_t xQueue;
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-	 xQueue = xQueueCreate(5,sizeof(int));
+	 xQueue = xQueueCreate(QUEUE_LENGTH, sizeof(char *));
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -157,13 +158,13 @@ int main(void)
   /* Create the thread(s) */
   if(xQueue != NULL){
   /* creation of defaultTask */
-  defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
+  //defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
   /* creation of myTask02 */
-  myTask02Handle = osThreadNew(StartTask02, &xStructsToSend[0], &myTask02_attributes);
+  myTask02Handle = osThreadNew(StartTask02,NULL, &myTask02_attributes);
 
   /* creation of myTask03 */
-  myTask03Handle = osThreadNew(StartTask03, &xStructsToSend[1], &myTask03_attributes);
+  myTask03Handle = osThreadNew(StartTask03,NULL, &myTask03_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -264,73 +265,9 @@ static void MX_GPIO_Init(void)
 /* USER CODE END Header_StartDefaultTask */
 void StartDefaultTask(void *argument)
 {
-  /* USER CODE BEGIN 5 */
+	for(;;){
 
-  /* Infinite loop */
-//  while(1)
-//  {
-//	  xQueueSend(xQueue, &data, 0);
-//	  printf("Sender Task: Sent data %d\r\n", data);
-//	  data++;
-//	  HAL_GPIO_TogglePin(gled_GPIO_Port, gled_Pin);
-//	  HAL_Delay(1000);
-//	  vTaskDelay(pdMS_TO_TICKS(1000));
-//  }
-
-	// RECEIVER TASK :
-//    int receivedData;
-//
-//    while (1) {
-//        // Receive data from the queue
-//        if (xQueueReceive(xQueue, &receivedData, portMAX_DELAY) == pdTRUE) {
-//            printf("Receiver Task: Received data %d \r\n", receivedData);
-//        }
-//    }
-
-	Data_t xReceivedStructure;
-	BaseType_t xStatus;
-	/* This task is also defined within an infinite loop. */
-	for( ;; )
-	{
-	/* Because it has the lowest priority this task will only run when the
-	sending tasks are in the Blocked state. The sending tasks will only enter
-	the Blocked state when the queue is full so this task always expects the
-	number of items in the queue to be equal to the queue length, which is 3 in
-	this case. */
-	if( uxQueueMessagesWaiting( xQueue ) != 3 )
-	{
-	printf( "Queue should have been full!\r\n" );
 	}
-	/* Receive from the queue.
-	The second parameter is the buffer into which the received data will be
-	placed. In this case the buffer is simply the address of a variable that
-	has the required size to hold the received structure.
-	The last parameter is the block time - the maximum amount of time that the
-	task will remain in the Blocked state to wait for data to be available
-	if the queue is already empty. In this case a block time is not necessary
-	because this task will only run when the queue is full. */
-	xStatus = xQueueReceive( xQueue, &xReceivedStructure, 100 );
-	if( xStatus == pdPASS )
-	{
-	/* Data was successfully received from the queue, print out the received
-	value and the source of the value. */
-	if( xReceivedStructure.eDataSource == eSender1 )
-	{
-	printf( "From Sender 1 = %d \r\n ", xReceivedStructure.ucValue );
-	}
-	else
-	{
-	printf( "From Sender 2 = %d \r\n ", xReceivedStructure.ucValue );
-	}
-	}
-	else
-	{
-	/* Nothing was received from the queue. This must be an error as this
-	task should only run when the queue is full. */
-	printf( "Could not receive from the queue.\r\n" );
-	}
-	}
-  /* USER CODE END 5 */
 }
 
 /* USER CODE BEGIN Header_StartTask02 */
@@ -342,62 +279,20 @@ void StartDefaultTask(void *argument)
 /* USER CODE END Header_StartTask02 */
 void StartTask02(void *argument)
 {
-  /* USER CODE BEGIN StartTask02 */
-	//int receivedData;
-  /* Infinite loop */
-//  while(1)
-//  {
-//	  if (xQueueReceive(xQueue, &data, portMAX_DELAY) == pdTRUE)
-//	  {
-//	              printf("Receiver Task: Received data %d\n", data);
-//	  }
-////	  HAL_GPIO_TogglePin(rled_GPIO_Port, rled_Pin);
-////	  //vTaskDelay(100);
-////	  HAL_Delay(100);
-//  }
 
-	// SENDER TASK :
-//	 int data = 1;
-//
-//	    while (1) {
-//	        // Send data to the queue
-//	    	if(xQueueSend(xQueue, &data, 0) == pdTRUE )
-//	    	{
-//	        printf("Sender Task 1: Sent data %d \r\n", data);
-//
-//	        // Increment the data value
-//	        data++;
-//	    	}
-//	        // Delay before sending the next data
-//	        vTaskDelay(1000);
-//	    }
-
-	BaseType_t xStatus;
-	const TickType_t xTicksToWait = pdMS_TO_TICKS( 100 );
-	/* As per most tasks, this task is implemented within an infinite loop. */
-	for( ;; )
+	//Sender Task
+	char *pcStringToSend;
+	    const size_t xMaxStringLength = 50;
+	    char buff[50];
+	/* Infinite loop */
+	while(1)
 	{
-	/* Send to the queue.
-	The second parameter is the address of the structure being sent. The
-	address is passed in as the task parameter so pvParameters is used
-	directly.
-	The third parameter is the Block time - the time the task should be kept
-	in the Blocked state to wait for space to become available on the queue
-	if the queue is already full. A block time is specified because the
-	sending tasks have a higher priority than the receiving task so the queue
-	is expected to become full. The receiving task will remove items from
-	the queue when both sending tasks are in the Blocked state. */
-	xStatus = xQueueSendToBack( xQueue, argument, xTicksToWait );
-	if( xStatus != pdPASS )
-	{
-	/* The send operation could not complete, even after waiting for 100ms.
-	This must be an error as the receiving task should make space in the
-	queue as soon as both sending tasks are in the Blocked state. */
-	printf( "Could not send to the queue.\r\n" );
+	     pcStringToSend = ( char * ) buff;
+	     snprintf( pcStringToSend, xMaxStringLength, "hello from sender\r\n");
+	     xQueueSend( xQueue,&pcStringToSend,portMAX_DELAY );
+	     vTaskDelay(1000);
 	}
-	}
-
-  /* USER CODE END StartTask02 */
+	/* USER CODE END StartTask02 */
 }
 
 /* USER CODE BEGIN Header_StartTask03 */
@@ -409,52 +304,22 @@ void StartTask02(void *argument)
 /* USER CODE END Header_StartTask03 */
 void StartTask03(void *argument)
 {
-
+	// Receiver TAsk
+	//char *buffer1;
+	  char *pcReceivedString;
+	  /* Infinite loop */
+	  while(1)
+	  {
+	      xQueueReceive( xQueue,&pcReceivedString,portMAX_DELAY );
+	      /* The buffer holds a string, print it out. */
+	      printf("\r received the string: %s",pcReceivedString);
+	      /* The buffer is not required any more - release it so it can be freed, or re-used. */
+	     // prvReleaseBuffer( pcReceivedString );
+	  }
   /* USER CODE BEGIN StartTask03
-   Infinite loop
-  for(;;)
-  {
-    osDelay(1);
-  }
+
    USER CODE END StartTask03 */
-	// SENDER TASK :
-//	int data = 100;
-//
-//	    while (1) {
-//	        // Send data to the queue
-//	        if(xQueueSend(xQueue, &data, 0)==pdTRUE){
-//	        printf("Sender Task 2: Sent data %d \r\n", data);
-//
-//	        // Increment the data value
-//	        data += 10;
-//	        }
-//	        // Delay before sending the next data
-//	        vTaskDelay(1000);
-//	    }
-	BaseType_t xStatus;
-		const TickType_t xTicksToWait = pdMS_TO_TICKS( 100 );
-		/* As per most tasks, this task is implemented within an infinite loop. */
-		for( ;; )
-		{
-		/* Send to the queue.
-		The second parameter is the address of the structure being sent. The
-		address is passed in as the task parameter so pvParameters is used
-		directly.
-		The third parameter is the Block time - the time the task should be kept
-		in the Blocked state to wait for space to become available on the queue
-		if the queue is already full. A block time is specified because the
-		sending tasks have a higher priority than the receiving task so the queue
-		is expected to become full. The receiving task will remove items from
-		the queue when both sending tasks are in the Blocked state. */
-		xStatus = xQueueSendToBack( xQueue, argument, xTicksToWait );
-		if( xStatus != pdPASS )
-		{
-		/* The send operation could not complete, even after waiting for 100ms.
-		This must be an error as the receiving task should make space in the
-		queue as soon as both sending tasks are in the Blocked state. */
-		printf( "Could not send to the queue.\r\n" );
-		}
-		}
+
 }
 
 /**
