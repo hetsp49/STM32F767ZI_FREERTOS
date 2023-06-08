@@ -20,13 +20,16 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "cmsis_os.h"
-
+#include "timers.h"
+#include "stdio.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
+#define mainONE_SHOT_TIMER_PERIOD pdMS_TO_TICKS( 3333 )
+#define mainAUTO_RELOAD_TIMER_PERIOD pdMS_TO_TICKS( 500 )
 /* USER CODE BEGIN PTD */
 
 /* USER CODE END PTD */
@@ -47,13 +50,6 @@ osThreadId_t defaultTaskHandle;
 const osThreadAttr_t defaultTask_attributes = {
   .name = "defaultTask",
   .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
-};
-/* Definitions for myTask02 */
-osThreadId_t myTask02Handle;
-const osThreadAttr_t myTask02_attributes = {
-  .name = "myTask02",
-  .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityHigh,
 };
 /* USER CODE BEGIN PV */
@@ -64,14 +60,15 @@ const osThreadAttr_t myTask02_attributes = {
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 void StartDefaultTask(void *argument);
-void StartTask02(void *argument);
 
 /* USER CODE BEGIN PFP */
-
+static void prvAutoReloadTimerCallback( TimerHandle_t xTimer );
+static void prvOneShotTimerCallback( TimerHandle_t xTimer );
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
 
 /* USER CODE END 0 */
 
@@ -82,6 +79,7 @@ void StartTask02(void *argument);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
+
 
   /* USER CODE END 1 */
 
@@ -118,8 +116,15 @@ int main(void)
   /* add semaphores, ... */
   /* USER CODE END RTOS_SEMAPHORES */
 
+
   /* USER CODE BEGIN RTOS_TIMERS */
   /* start timers, add new ones, ... */
+  // Start the timers
+  TimerHandle_t xAutoReloadTimer, xOneShotTimer;
+  BaseType_t xTimer1Started, xTimer2Started;
+
+  xOneShotTimer = xTimerCreate("OneShot",mainONE_SHOT_TIMER_PERIOD,pdFALSE,0,prvOneShotTimerCallback );
+  xAutoReloadTimer = xTimerCreate("AutoReload",mainAUTO_RELOAD_TIMER_PERIOD,pdTRUE,0,prvAutoReloadTimerCallback );
   /* USER CODE END RTOS_TIMERS */
 
   /* USER CODE BEGIN RTOS_QUEUES */
@@ -128,10 +133,7 @@ int main(void)
 
   /* Create the thread(s) */
   /* creation of defaultTask */
-  defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
-
-  /* creation of myTask02 */
-  myTask02Handle = osThreadNew(StartTask02, NULL, &myTask02_attributes);
+  //defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -140,9 +142,20 @@ int main(void)
   /* USER CODE BEGIN RTOS_EVENTS */
   /* add events, ... */
   /* USER CODE END RTOS_EVENTS */
-
+  //osKernelStart();
   /* Start scheduler */
-  osKernelStart();
+  if( ( xOneShotTimer != NULL ) && ( xAutoReloadTimer != NULL ) )
+     {
+      	  printf("both timers created\n");
+      	  xTimer1Started = xTimerStart( xOneShotTimer, 0 );
+      	  xTimer2Started = xTimerStart( xAutoReloadTimer, 0 );
+
+      	  if( ( xTimer1Started == pdPASS ) && ( xTimer2Started == pdPASS ) )
+     	 	 {
+     /* Start the scheduler. */
+     		 	 vTaskStartScheduler();
+     	 	 }
+     }
 
   /* We should never get here as control is now taken by the scheduler */
   /* Infinite loop */
@@ -234,6 +247,7 @@ void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN 5 */
   /* Infinite loop */
+
   while(1)
   {
 	  HAL_GPIO_TogglePin(gled_GPIO_Port, gled_Pin);
@@ -242,25 +256,25 @@ void StartDefaultTask(void *argument)
   /* USER CODE END 5 */
 }
 
-/* USER CODE BEGIN Header_StartTask02 */
-/**
-* @brief Function implementing the myTask02 thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_StartTask02 */
-void StartTask02(void *argument)
+static void prvOneShotTimerCallback( TimerHandle_t xTimer )
 {
-  /* USER CODE BEGIN StartTask02 */
-  /* Infinite loop */
-  while(1)
-  {
-	  HAL_GPIO_TogglePin(rled_GPIO_Port, rled_Pin);
-	  vTaskDelay(100);
-  }
-  /* USER CODE END StartTask02 */
+TickType_t xTimeNow;
+/* Obtain the current tick count. */
+xTimeNow = xTaskGetTickCount();
+/* Output a string to show the time at which the callback was executed. */
+printf( "One-shot timer callback executing %d \n", xTimeNow );
+/* File scope variable. */
+//  ulCallCount++;
 }
-
+static void prvAutoReloadTimerCallback( TimerHandle_t xTimer )
+{
+TickType_t xTimeNow;
+/* Obtain the current tick count. */
+xTimeNow = xTaskGetTickCount();
+/* Output a string to show the time at which the callback was executed. */
+printf( "Auto-reload timer callback executing %d \n", xTimeNow );
+  //ulCallCount++;
+}
 /**
   * @brief  This function is executed in case of error occurrence.
   * @retval None
