@@ -20,18 +20,18 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "cmsis_os.h"
+
+/* Private includes ----------------------------------------------------------*/
+/* USER CODE BEGIN Includes */
 #include "timers.h"
 #include "stdio.h"
 #include "task.h"
-/* Private includes ----------------------------------------------------------*/
-/* USER CODE BEGIN Includes */
-
+#include "stdlib.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
-
 /* USER CODE BEGIN PTD */
-
+//kdkd
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -50,10 +50,14 @@ osThreadId_t defaultTaskHandle;
 const osThreadAttr_t defaultTask_attributes = {
   .name = "defaultTask",
   .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityHigh,
+  .priority = (osPriority_t) osPriorityNormal,
 };
 /* USER CODE BEGIN PV */
-
+//#define mainONE_SHOT_TIMER_PERIOD pdMS_TO_TICKS( 3333 )
+//#define mainAUTO_RELOAD_TIMER_PERIOD pdMS_TO_TICKS( 500 )
+__IO uint32_t OsStatus = 0;
+TaskHandle_t task1_handle;
+TimerHandle_t xAutoReloadTimer;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -63,15 +67,22 @@ void StartDefaultTask(void *argument);
 
 /* USER CODE BEGIN PFP */
 
+static void prvTimerCallback( TimerHandle_t xTimer );
+//static void prvOneShotTimerCallback( TimerHandle_t xTimer );
+/* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-int i=1000;
+/*int i=1000;
 void timerCallback(TimerHandle_t xTimer)
 {
-	printf("Timer expired after %d ms\r\n",i);
-	i+=1000;
-}
+
+    printf("Timer expired after %d ms\r\n",i);
+    i+=1000;
+
+}*/
+const TickType_t xHealthyTimerPeriod = pdMS_TO_TICKS( 3000 );
+const TickType_t xErrorTimerPeriod = pdMS_TO_TICKS( 200 );
 
 /* USER CODE END 0 */
 
@@ -82,7 +93,6 @@ void timerCallback(TimerHandle_t xTimer)
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-
 
   /* USER CODE END 1 */
 
@@ -119,15 +129,34 @@ int main(void)
   /* add semaphores, ... */
   /* USER CODE END RTOS_SEMAPHORES */
 
-
   /* USER CODE BEGIN RTOS_TIMERS */
   /* start timers, add new ones, ... */
-  // Start the timers
- // TimerHandle_t xAutoReloadTimer, xOneShotTimer;
- // BaseType_t xTimer1Started, xTimer2Started;
+  /*TimerHandle_t xAutoReloadTimer, xOneShotTimer;
+  BaseType_t xTimer1Started, xTimer2Started;
 
- // xOneShotTimer = xTimerCreate("OneShot",mainONE_SHOT_TIMER_PERIOD,pdFALSE,0,prvOneShotTimerCallback );
-  //xAutoReloadTimer = xTimerCreate("AutoReload",mainAUTO_RELOAD_TIMER_PERIOD,pdTRUE,0,prvAutoReloadTimerCallback );
+  xOneShotTimer = xTimerCreate("OneShot",mainONE_SHOT_TIMER_PERIOD,pdFALSE,0,prvOneShotTimerCallback );
+  xAutoReloadTimer = xTimerCreate("AutoReload",mainAUTO_RELOAD_TIMER_PERIOD,pdTRUE,0,prvAutoReloadTimerCallback );*/
+  BaseType_t  xTimer2Started;
+
+    xTaskCreate(StartDefaultTask, "LED Task", 1024, NULL, 1, &task1_handle);
+
+   // xOneShotTimer = xTimerCreate("OneShot",mainONE_SHOT_TIMER_PERIOD,pdFALSE,0,prvTimerCallback );
+    xAutoReloadTimer = xTimerCreate("AutoReload",xHealthyTimerPeriod,pdTRUE,0,prvTimerCallback);
+
+    if(  xAutoReloadTimer != NULL  )
+     {
+      printf("timers created\n");
+     //xTimer1Started = xTimerStart( xOneShotTimer, 0 );
+     xTimer2Started = xTimerStart( xAutoReloadTimer, 0 );
+
+       if( xTimer2Started == pdPASS  )
+        {
+           /* Start the scheduler. */
+           vTaskStartScheduler();
+        }
+     }
+
+
   /* USER CODE END RTOS_TIMERS */
 
   /* USER CODE BEGIN RTOS_QUEUES */
@@ -148,6 +177,7 @@ int main(void)
 
   /* Start scheduler */
   osKernelStart();
+
   /* We should never get here as control is now taken by the scheduler */
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
@@ -214,7 +244,7 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, gled_Pin|rled_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : gled_Pin rled_Pin */
+  /*Configure GPIO pins : gled_Pin r_led_Pin */
   GPIO_InitStruct.Pin = gled_Pin|rled_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
@@ -236,35 +266,67 @@ static void MX_GPIO_Init(void)
 /* USER CODE END Header_StartDefaultTask */
 void StartDefaultTask(void *argument)
 {
-	TimerHandle_t xTimer;
-	//
-	        // Create a timer with a period of 1000ms (1 second)
-	        xTimer = xTimerCreate("MyTimer", pdMS_TO_TICKS(1000), pdTRUE, 0, timerCallback);
+  /* USER CODE BEGIN 5 */
 
-	        if (xTimer == NULL)
-	        {
-	            printf("Failed to create timer!\r\n");
-	            vTaskDelete(NULL);
-	        }
 
-	        // Start the timer
-	        xTimerStart(xTimer, 0);
-
-	        // Delay for 5000ms (5 seconds)
-	        vTaskDelay(pdMS_TO_TICKS(5000));
-	        // Reset the timer
-	            xTimerReset(xTimer, 0);
-
-	            // Delay for another 5000ms (5 seconds)
-	            vTaskDelay(pdMS_TO_TICKS(5000));
-
-	            // Stop and delete the timer
-	            xTimerStop(xTimer, 0);
-	            xTimerDelete(xTimer, 0);
-
-	            // Delete the task
-	            vTaskDelete(NULL);
+//	    TimerHandle_t xTimer;
+//
+//	    // Create a timer with a period of 1000ms (1 second)
+//	    xTimer = xTimerCreate("MyTimer", pdMS_TO_TICKS(1000), pdTRUE, 0, timerCallback);
+//
+//	    if (xTimer == NULL)
+//	    {
+//	        printf("Failed to create timer!\r\n");
+//	        vTaskDelete(NULL);
+//	    }
+//
+//	    // Start the timer
+//	    xTimerStart(xTimer, 0);
+//
+//	    // Delay for 5000ms (5 seconds)
+//	    vTaskDelay(pdMS_TO_TICKS(5000));
+//	    // Reset the timer
+//	        xTimerReset(xTimer, 0);
+//
+//	        // Delay for another 5000ms (5 seconds)
+//	        vTaskDelay(pdMS_TO_TICKS(5000));
+//
+//	        // Stop and delete the timer
+//	        xTimerStop(xTimer, 0);
+//	        xTimerDelete(xTimer, 0);
+//
+//	        // Delete the task
+//	        vTaskDelete(NULL);
+printf("Task is running\r\n");
+while(1)
+{
+	HAL_GPIO_TogglePin(gled_GPIO_Port, gled_Pin);
+	HAL_Delay(2000);
 }
+osDelay(1000);
+}
+
+static void prvTimerCallback( TimerHandle_t xTimer )
+{
+
+static BaseType_t xErrorDetected = pdFALSE;
+
+if( xErrorDetected == pdFALSE )
+    {
+
+    //if( CheckTasksAreRunningWithoutError() == pdFAIL )
+        if(eTaskGetState(task1_handle) != eRunning )
+        {
+
+            xTimerChangePeriod( xTimer, xErrorTimerPeriod, 0 ); /* Do not block when sending this command. */
+        }
+        /* Latch that an error has already been detected. */
+        xErrorDetected = pdTRUE;
+    }
+HAL_GPIO_TogglePin(gled_GPIO_Port, gled_Pin);
+}
+  /* USER CODE END 5 */
+
 
 /**
   * @brief  This function is executed in case of error occurrence.
