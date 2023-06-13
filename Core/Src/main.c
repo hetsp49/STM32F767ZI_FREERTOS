@@ -54,21 +54,21 @@ static void MX_GPIO_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
-{
-  /* Prevent unused argument(s) compilation warning */
-  UNUSED(GPIO_Pin);
-
-  /* NOTE: This function Should not be modified, when the callback is needed,
-           the HAL_GPIO_EXTI_Callback could be implemented in the user file
-   */
-  if(HAL_GPIO_ReadPin(mybutton_GPIO_Port, mybutton_Pin) == 0){
-	 count ++;
-	 if(count >2){
-		 count =0;
-	 }
-  }
-}
+//void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+//{
+//  /* Prevent unused argument(s) compilation warning */
+//  UNUSED(GPIO_Pin);
+//
+//  /* NOTE: This function Should not be modified, when the callback is needed,
+//           the HAL_GPIO_EXTI_Callback could be implemented in the user file
+//   */
+//  if(HAL_GPIO_ReadPin(mybutton_GPIO_Port, mybutton_Pin) == 0){
+//	 count ++;
+//	 if(count >2){
+//		 count =0;
+//	 }
+//  }
+//}
 
 /* USER CODE END 0 */
 
@@ -110,12 +110,12 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-//	  if(HAL_GPIO_ReadPin(mybutton_GPIO_Port, mybutton_Pin) == 1){
-//	 	  HAL_GPIO_TogglePin(gled_GPIO_Port, gled_Pin);
-//	 	  HAL_Delay(500);
-	  if(count ==0){
-		  HAL_GPIO_TogglePin(gled_GPIO_Port, gled_Pin);
-		   HAL_Delay(500);
+	  if(HAL_GPIO_ReadPin(mybutton_GPIO_Port, mybutton_Pin) == 1){
+	 	  HAL_GPIO_TogglePin(gled_GPIO_Port, gled_Pin);
+	 	  HAL_Delay(500);
+//	  if(count ==0){
+//		  HAL_GPIO_TogglePin(gled_GPIO_Port, gled_Pin);
+//		   HAL_Delay(500);
 	  }
     /* USER CODE END WHILE */
 
