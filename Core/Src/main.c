@@ -19,10 +19,8 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include <string.h>
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#define BUFFER_SIZE 100
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -42,13 +40,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 UART_HandleTypeDef huart3;
-uint8_t rchar ;
-int flag=0,count=0;
-uint8_t Buffer[BUFFER_SIZE];
-int head=-1;
-int tail=-1;
-int  Isfull_flag;
-uint8_t transmit_flag = 0;
+int Received_Data;
 /* USER CODE BEGIN PV */
 
 
@@ -58,8 +50,8 @@ uint8_t transmit_flag = 0;
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART3_UART_Init(void);
-void WriteToBuffer(int data);
-int Is_BufferFull(void);
+void Transmit_UART(uint8_t data);
+uint8_t Receive_UART(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -99,28 +91,23 @@ int main(void)
   MX_GPIO_Init();
   MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
-  HAL_UART_Receive_IT (&huart3,&rchar,1);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1) {
 
-	  while (!(head == - 1 || head > tail))
-	     {
-		  if(HAL_UART_Transmit_IT(&huart3,&Buffer[head], 1) == HAL_OK)
-		  {
-			  head=head+1;
-		  }
+	  if(Receive_UART()){
+	  	  	  Transmit_UART(Received_Data);
+	  	  		 }
 
 
   }
-	 HAL_Delay(10);
   /* USER CODE BEGIN 3 */
 }
   /* USER CODE END 3 */
 
-}
+
 /**
   * @brief System Clock Configuration
   * @retval None
@@ -228,29 +215,24 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+//RECEIVING CHARACTER INTO RDR
+uint8_t Receive_UART(void)
 {
-	int count_receive;
-	 if (huart->Instance == USART3)
-	  {
+	if(USART3->ISR & USART_ISR_RXNE)
+	{
+		Received_Data=USART3->RDR;
+		return 1;
+	}
 
-		 if(head == -1 )
-			 {
-			 	 head=0;
-			 }
-		 tail=tail+1;
-		 Buffer[tail]= rchar;
-		count++;
-		count_receive =HAL_UART_Receive_IT(&huart3,&rchar, 1);
-		if((count_receive!=HAL_OK))
-		{
-			printf("error %d ",count_receive);
-			ATOMIC_SET_BIT(huart->Instance->CR1, USART_CR1_RXNEIE);
-		}
-		// Start next reception
-	  }
+	return 0;
 }
+//TRANSMIT CHARACTER USING TDR
+void Transmit_UART(uint8_t data)
+{
+	while (!(USART3->ISR & USART_ISR_TXE));
 
+	USART3->TDR=data;
+}
 
 /* USER CODE END 4 */
 
