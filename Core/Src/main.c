@@ -22,7 +22,7 @@
 #include <string.h>
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#define BUFFER_SIZE 100
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -44,9 +44,13 @@
 UART_HandleTypeDef huart3;
 uint8_t rchar ;
 int flag=0,count=0;
-uint8_t buffer[100];
-int number =0;
+uint8_t Buffer[BUFFER_SIZE];
+int head=-1;
+int tail=-1;
+int  Isfull_flag;
+uint8_t transmit_flag = 0;
 /* USER CODE BEGIN PV */
+
 
 /* USER CODE END PV */
 
@@ -54,6 +58,8 @@ int number =0;
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART3_UART_Init(void);
+void WriteToBuffer(int data);
+int Is_BufferFull(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -99,19 +105,22 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1) {
-	  if (flag==1)
-	      {
-	        // Transmit received character back
-	        HAL_UART_Transmit(&huart3,(uint8_t *)buffer, sizeof(buffer), HAL_MAX_DELAY);
-	        memset(buffer, 0, sizeof(buffer));
-	        flag=0;
-	      }
+
+	  while (!(head == - 1 || head > tail))
+	     {
+		  if(HAL_UART_Transmit_IT(&huart3,&Buffer[head], 1) == HAL_OK)
+		  {
+			  head=head+1;
+		  }
+
+
   }
+	 HAL_Delay(10);
   /* USER CODE BEGIN 3 */
 }
   /* USER CODE END 3 */
 
-
+}
 /**
   * @brief System Clock Configuration
   * @retval None
@@ -221,14 +230,24 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
+	int count_receive;
 	 if (huart->Instance == USART3)
 	  {
 
-		 buffer[number]=rchar;
-		flag =1;
+		 if(head == -1 )
+			 {
+			 	 head=0;
+			 }
+		 tail=tail+1;
+		 Buffer[tail]= rchar;
 		count++;
-		number++;
-	   HAL_UART_Receive_IT(&huart3,& rchar , 1); // Start next reception
+		count_receive =HAL_UART_Receive_IT(&huart3,&rchar, 1);
+		if((count_receive!=HAL_OK))
+		{
+			printf("error %d ",count_receive);
+			ATOMIC_SET_BIT(huart->Instance->CR1, USART_CR1_RXNEIE);
+		}
+		// Start next reception
 	  }
 }
 
