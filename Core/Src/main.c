@@ -42,10 +42,11 @@
 /* Private variables ---------------------------------------------------------*/
 
 UART_HandleTypeDef huart3;
-BaseType_t xQueueBuffer[QUEUE_LENGTH];
-uint8_t  readIndex=-1;
-uint8_t  writeIndex=-1;
+int  xQueueBuffer[QUEUE_LENGTH];
+int  readIndex=-1;
+int   writeIndex=-1;
 uint8_t Received_Data;
+int flag=0;
 /* Definitions for defaultTask */
 osThreadId_t defaultTaskHandle;
 const osThreadAttr_t defaultTask_attributes = {
@@ -65,7 +66,6 @@ static void MX_USART3_UART_Init(void);
 void StartDefaultTask(void *argument);
 
 /* USER CODE BEGIN PFP */
-
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -144,12 +144,9 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1) {
-	  while (!(readIndex == - 1 || readIndex > writeIndex)){
-		while (!(USART3->ISR & USART_ISR_TXE));
-			USART3->TDR=xQueueBuffer[readIndex];
-			  readIndex=readIndex+1;
-	  	  }
-	  }
+  }
+
+
 }
 
 /**
@@ -266,14 +263,15 @@ void USART3_IRQHandler(void)
   /* USER CODE END USART3_IRQn 0 */
  // HAL_UART_IRQHandler(&huart3);
 	 if(readIndex == -1 )
-				 {
-				 	 readIndex=0;
-				 }
-		if(USART3->ISR & USART_ISR_RXNE)
-		{
-			 writeIndex=writeIndex+1;
-			 xQueueBuffer[writeIndex]=USART3->RDR;
-		}
+					 {
+					 	 readIndex=0;
+					 }
+			if(USART3->ISR & USART_ISR_RXNE)
+			{
+				 writeIndex = (writeIndex + 1) % QUEUE_LENGTH;
+				 xQueueBuffer[writeIndex]=USART3->RDR;
+				 flag=1;
+			}
   /* USER CODE BEGIN USART3_IRQn 1 */
 		// USART3->CR1 |= USART_CR1_RXNEIE;
   /* USER CODE END USART3_IRQn 1 */
@@ -291,12 +289,17 @@ void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN 5 */
   /* Infinite loop */
-  for(;;)
-  {
-    osDelay(1);
-  }
+while (1){
+	while (writeIndex != readIndex){
+			while (!(USART3->ISR & USART_ISR_TXE));
+				USART3->TDR=xQueueBuffer[readIndex];
+				  readIndex=(readIndex+1)% QUEUE_LENGTH;
+				  flag=0;
+		}
+	}
   /* USER CODE END 5 */
 }
+
 
 /**
   * @brief  This function is executed in case of error occurrence.
