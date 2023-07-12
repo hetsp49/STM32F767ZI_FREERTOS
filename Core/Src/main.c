@@ -20,6 +20,10 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "cmsis_os.h"
+#include "FreeRTOS.h"
+#include "queue.h"
+#include "task.h"
+
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -27,7 +31,10 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-#define QUEUE_LENGTH 100
+#define QUEUE_LENGTH 1000
+QueueHandle_t xQueue;
+int8_t scCount = 0;
+int8_t slRecCount, slSendCount = 0;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -42,17 +49,12 @@
 /* Private variables ---------------------------------------------------------*/
 
 UART_HandleTypeDef huart3;
-int  xQueueBuffer[QUEUE_LENGTH];
-int  readIndex=-1;
-int   writeIndex=-1;
-uint8_t Received_Data;
-int flag=0;
 /* Definitions for defaultTask */
 osThreadId_t defaultTaskHandle;
 const osThreadAttr_t defaultTask_attributes = {
   .name = "defaultTask",
-  .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
+  .stack_size = configMINIMAL_STACK_SIZE,
+  .priority = (osPriority_t) osPriorityHigh,
 };
 /* USER CODE BEGIN PV */
 
@@ -63,7 +65,7 @@ const osThreadAttr_t defaultTask_attributes = {
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART3_UART_Init(void);
-void StartDefaultTask(void *argument);
+void prvDefaultTask(void *argument);
 
 /* USER CODE BEGIN PFP */
 /* USER CODE END PFP */
@@ -104,6 +106,7 @@ int main(void)
   MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
   USART3->CR1 |= USART_CR1_RXNEIE;
+
   /* USER CODE END 2 */
 
   /* Init scheduler */
@@ -122,12 +125,16 @@ int main(void)
   /* USER CODE END RTOS_TIMERS */
 
   /* USER CODE BEGIN RTOS_QUEUES */
+  xQueue = xQueueCreate(QUEUE_LENGTH, sizeof(char));
+  if (xQueue == NULL) {
+    // Queue creation failed, handle the error
+  }
   /* add queues, ... */
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
   /* creation of defaultTask */
-  defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
+  defaultTaskHandle = osThreadNew(prvDefaultTask, NULL, &defaultTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -259,22 +266,27 @@ static void MX_GPIO_Init(void)
 void USART3_IRQHandler(void)
 {
   /* USER CODE BEGIN USART3_IRQn 0 */
-
   /* USER CODE END USART3_IRQn 0 */
- // HAL_UART_IRQHandler(&huart3);
-	 if(readIndex == -1 )
-					 {
-					 	 readIndex=0;
-					 }
-			if(USART3->ISR & USART_ISR_RXNE)
-			{
-				 writeIndex = (writeIndex + 1) % QUEUE_LENGTH;
-				 xQueueBuffer[writeIndex]=USART3->RDR;
-				 flag=1;
-			}
+	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+	if (USART3->ISR & USART_ISR_RXNE)
+	{
+		if (xQueueSendFromISR(xQueue, (uint8_t*)&USART3->RDR, &xHigherPriorityTaskWoken) != pdTRUE)
+		{
+			scCount++;
+		}
+		else
+		{
+			slRecCount++;
+		}
+	}
   /* USER CODE BEGIN USART3_IRQn 1 */
-		// USART3->CR1 |= USART_CR1_RXNEIE;
+	if (xHigherPriorityTaskWoken)
+	{
+		// Actual macro used here is port specific.
+		portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+	}
   /* USER CODE END USART3_IRQn 1 */
+
 }
 /* USER CODE END 4 */
 
@@ -285,18 +297,22 @@ void USART3_IRQHandler(void)
   * @retval None
   */
 /* USER CODE END Header_StartDefaultTask */
-void StartDefaultTask(void *argument)
+void prvDefaultTask(void *argument)
 {
   /* USER CODE BEGIN 5 */
   /* Infinite loop */
-while (1){
-	while (writeIndex != readIndex){
-			while (!(USART3->ISR & USART_ISR_TXE));
-				USART3->TDR=xQueueBuffer[readIndex];
-				  readIndex=(readIndex+1)% QUEUE_LENGTH;
-				  flag=0;
+	while (1)
+	{
+		char cDataTemp = 0;
+		if (xQueueReceive(xQueue, &cDataTemp, 0) == pdTRUE)
+		{
+			slSendCount++;
+			while (!(USART3->ISR & USART_ISR_TXE))
+				;
+			USART3->TDR = cDataTemp;
 		}
 	}
+
   /* USER CODE END 5 */
 }
 
