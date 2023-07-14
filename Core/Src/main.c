@@ -19,6 +19,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include"stdio.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "ssd1306.h"
@@ -27,7 +28,9 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
+	char time[30];
+	RTC_TimeTypeDef sTime;
+	RTC_TimeTypeDef sDate;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -43,19 +46,52 @@
 
 I2C_HandleTypeDef hi2c3;
 
-/* USER CODE BEGIN PV */
+RTC_HandleTypeDef hrtc;
 
+/* USER CODE BEGIN PV */
+RTC_TimeTypeDef resetTime;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_I2C3_Init(void);
+static void MX_RTC_Init(void);
 /* USER CODE BEGIN PFP */
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+void set_time(void){
+	  RTC_TimeTypeDef sTime = {0};
+	  RTC_DateTypeDef sDate = {0};
+	  sTime.Hours = 0x10;
+	  sTime.Minutes = 0x20;
+	  sTime.Seconds = 0x30;
+	  sTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
+	  sTime.StoreOperation = RTC_STOREOPERATION_RESET;
+	  if (HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BCD) != HAL_OK)
+	  {
+	    Error_Handler();
+	  }
+
+	  /* USER CODE BEGIN RTC_Init 2 */
+	   HAL_RTCEx_BKUPWrite(&hrtc, RTC_BKP_DR31, 0x32F2);
+}
+
+void get_time(void)
+{
+	RTC_TimeTypeDef gTime = {0};
+	RTC_DateTypeDef gDate = {0};
+	HAL_RTC_GetTime(&hrtc,&gTime,RTC_FORMAT_BIN);
+	HAL_RTC_GetDate(&hrtc,&gDate,RTC_FORMAT_BIN);
+	snprintf((char*)time, sizeof(time), "%02d:%02d:%02d", gTime.Hours, gTime.Minutes, gTime.Seconds);
+	 ssd1306_Fill(White);
+		    ssd1306_SetCursor(0, 0);
+		    ssd1306_WriteString(time, Font_16x26, Black);
+		    ssd1306_UpdateScreen();
+}
+
 
 /* USER CODE END 0 */
 
@@ -72,7 +108,7 @@ int main(void)
   /* MCU Configuration--------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
+   HAL_Init();
 
   /* USER CODE BEGIN Init */
 
@@ -88,17 +124,20 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_I2C3_Init();
-
+  MX_RTC_Init();
   /* USER CODE BEGIN 2 */
   ssd1306_Init();
+  if(HAL_RTCEx_BKUPRead(&hrtc, RTC_BKP_DR31) != 0x32F2) {
+	 set_time();
+    }
   /* USER CODE END 2 */
-
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
     /* USER CODE END WHILE */
-	  ssd1306_TestAll();
+	  get_time();
+	  HAL_Delay(500);
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
@@ -121,9 +160,10 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_LSI;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  RCC_OscInitStruct.LSIState = RCC_LSI_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
@@ -142,7 +182,8 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-  PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_I2C3;
+  PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_RTC|RCC_PERIPHCLK_I2C3;
+  PeriphClkInitStruct.RTCClockSelection = RCC_RTCCLKSOURCE_LSI;
   PeriphClkInitStruct.I2c3ClockSelection = RCC_I2C3CLKSOURCE_PCLK1;
   if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
   {
@@ -193,6 +234,76 @@ static void MX_I2C3_Init(void)
   /* USER CODE BEGIN I2C3_Init 2 */
 
   /* USER CODE END I2C3_Init 2 */
+
+}
+
+/**
+  * @brief RTC Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_RTC_Init(void)
+{
+
+  /* USER CODE BEGIN RTC_Init 0 */
+
+  /* USER CODE END RTC_Init 0 */
+
+
+
+  /* USER CODE BEGIN RTC_Init 1 */
+
+  /* USER CODE END RTC_Init 1 */
+  /** Initialize RTC Only
+  */
+  hrtc.Instance = RTC;
+  hrtc.Init.HourFormat = RTC_HOURFORMAT_24;
+  hrtc.Init.AsynchPrediv = 127;
+  hrtc.Init.SynchPrediv = 255;
+  hrtc.Init.OutPut = RTC_OUTPUT_DISABLE;
+  hrtc.Init.OutPutPolarity = RTC_OUTPUT_POLARITY_HIGH;
+  hrtc.Init.OutPutType = RTC_OUTPUT_TYPE_OPENDRAIN;
+  if (HAL_RTC_Init(&hrtc) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /* USER CODE BEGIN Check_RTC_BKUP */
+//  __HAL_RCC_BKPRAM_CLK_ENABLE();
+  /* USER CODE END Check_RTC_BKUP */
+
+  /** Initialize RTC and set the Time and Date
+//  */
+//  sTime.Hours = 0x10;
+//  sTime.Minutes = 0x20;
+//  sTime.Seconds = 0x30;
+//  sTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
+//  sTime.StoreOperation = RTC_STOREOPERATION_RESET;
+//  if (HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BCD) != HAL_OK)
+//  {
+//    Error_Handler();
+//  }
+//  sDate.WeekDay = RTC_WEEKDAY_THURSDAY;
+//  sDate.Month = RTC_MONTH_JULY;
+//  sDate.Date = 0x13;
+//  sDate.Year = 0x0;
+//
+//  if (HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BCD) != HAL_OK)
+//  {
+//    Error_Handler();
+//  }
+//  /* USER CODE BEGIN RTC_Init 2 */
+//   sTime.Hours = 0x10;
+//   sTime.Minutes = 0x20;
+//   sTime.Seconds = 0x30;
+//   sTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
+//   sTime.StoreOperation = RTC_STOREOPERATION_RESET;
+//   if (HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BCD) != HAL_OK)
+//   {
+//     Error_Handler();
+//   }
+
+  /* USER CODE END RTC_Init 2 */
 
 }
 
